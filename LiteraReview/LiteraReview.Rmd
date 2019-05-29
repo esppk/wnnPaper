@@ -1,0 +1,51 @@
+---
+title: Draft
+fontsize: 12pt
+bibliography: mybibfile.bib
+output: pdf_document
+---
+
+## Overview
+
+There are many work related to the topic on wavelet and a special type of neural network, namely, wavelet neural network, however, not much of work directly relate to trading strategy. Wavetlet has been proposed to be a better way of combine both frequency domain and time domain. The idea is using dilation and translation to expand the so called mother wavelets in order to form an orthogonal basis in $L^2$ with wavelets. The neural networks are prooved to be able to approximate any continuous mapping(@funahashi1989approximate). The comination of the two was proposed only several years later. @zhang1992wavelet first propose the idea of wavelet network to approximate arbitrary nonlinear functions. 
+@zhang1993regressor introduced the Wavelet as a regression selection procedure in attempt to solve the problem of random initialization of neural network. 
+
+In time series analysis domain, @4494757 applied wavelet neural network in energy price forecasting in electricity markets. Also in electricy market, @1460110 using same set of techniques to predict long-term load.
+
+In finace, @844615 propose to predict stock trend prediction with nn and multiresolution analsis. _this can be utilize to form a momentum based trading strategy._
+
+The most closed related work is @Wang2013, where they use wavelet combine with neural network to predict stock prices. They, however, only use wavelet to denoise the data not using wavelet coefficients in the neurual network. The trading strategy is on based on daily predictions of stock prices. The strategy earned significant return in backtest. 
+
+
+## the scheme
+
+Predicting the price of next day seemly good example but lack of realistic value in stock trading. While the volatility will make the prediction hardly reliable, the friction in the real stock market will probably make the strategy less likely to be profitable. In inspired by the momentum strategy, we are looking for potential return in a relative longer period. 
+
+In the light of optimal strategy suggested by @jegadeesh2001profitability, we will try to use wavelet neural network to predict the return rate of the stock in next 3 months based on the data of last 12 month. Hopefully, this will outperform the benchmark which is the return of the traditional momentum strategy. 
+
+
+### benchmark--Momentum strategy
+
+the momentum is just the total return of last look-back period. Here we are using last 12 months. 
+
+```{r}
+suppressMessages(library(tidyquant))
+
+sp500 <- tq_index("SP500")
+tiker <- tq_index("DOW")
+
+tiker %>% select(symbol) %>% 
+    filter(symbol != "BRK.B") %>% 
+    mutate(prices = map(.x = symbol, ~ tq_get(.x, get = "stock.prices", from = "2010-01-01", to = "2019-01-01"))) -> dow_prices
+
+
+dow_prices %>% mutate(return )
+```
+
+
+
+
+
+
+References {#references .unnumbered}
+==========
