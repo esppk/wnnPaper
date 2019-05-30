@@ -30,7 +30,7 @@ the momentum is just the total return of last look-back period. Here we are usin
 
 ```{r}
 suppressMessages(library(tidyquant))
-
+library(tsibble)
 sp500 <- tq_index("SP500")
 tiker <- tq_index("DOW")
 
@@ -44,6 +44,27 @@ dow_prices %>% mutate(return )
 
 
 
+```{r}
+BA <- dow_prices %>% 
+  filter(symbol == "BA") %>% 
+  select(prices) %>% unnest()
+
+BA %>% as_tsibble(index = date) -> BA_tsbl
+
+
+# Is it necessary to fill the gap? or does it even correct?
+BA_tsbl %>% fill_gaps() %>% 
+  fill(adjusted, .direction = "down") -> BA_filled
+
+BA_filled %>% select(date, adjusted) %>% 
+  mutate(return = log(adjusted/lag(adjusted))) %>% 
+  #mutate(year_month = yearmonth(date)) %>%
+  #nest(-year_month) %>% 
+  mutate(momentum = slide_dbl(return, ~ reduce((.x+1), `*`), 
+                              .size = 365, .align = "center-left"))
+
+
+```
 
 
 
