@@ -28,6 +28,7 @@ In the light of optimal strategy suggested by @jegadeesh2001profitability, we wi
 
 the momentum is just the total return of last look-back period. Here we are using last 12 months. 
 
+
 ```{r}
 suppressMessages(library(tidyquant))
 library(tsibble)
@@ -39,33 +40,69 @@ tiker %>% select(symbol) %>%
     mutate(prices = map(.x = symbol, ~ tq_get(.x, get = "stock.prices", from = "2010-01-01", to = "2019-01-01"))) -> dow_prices
 
 
-dow_prices %>% mutate(return )
+dow_prices %>% filter(symbol != "DOW") -> dow_prices
+
 ```
 
+```{r}
+
+dow_prices %>% mutate(prices, prices = map(prices, function(x) x[c("adjusted", "date")])) %>% 
+ # mutate_if(is.list, simplify_all) %>% 
+  unnest(prices) -> dow_unnested
+
+```
+
+```{r}
+
+dow_unnested %>% as_tsibble(index = date, key = symbol) -> dow_tsbl
+
+# Is it necessary to fill the gap? or does it even correct?
+dow_tsbl %>% fill_gaps() %>% 
+  fill(adjusted, .direction = "down") -> dow_filled
+
+# calculate the momentum
+dow_filled %>% 
+  group_by(symbol) %>% 
+  mutate(return = slide_dbl(adjusted, ~ log(.x[2]/.x[1]), .size = 2)) %>% 
+  mutate(momentum = slide_dbl(return, ~ reduce((.x+1), `*`), 
+                              .size = 365, .align = "right")) -> dow_mom
+
+dow_mom %>% ungroup() %>% 
+  mutate(str_date = as.character(date)) %>% 
+  group_by(str_date) %>% 
+  top_n(1, momentum) %>% # calculate the winner for each date
+  ungroup() %>% as_tibble() %>% # remove the effect of grouping by date
+  # summarize number of wins for each stock
+  group_by(symbol) %>%  
+  summarise(n = n())
+```
 
 
 ```{r}
-BA <- dow_prices %>% 
-  filter(symbol == "BA") %>% 
-  select(prices) %>% unnest()
+dow_mom %>% ungroup() %>% 
+  mutate(str_date = as.character(date)) %>% 
+  group_by(str_date) %>% 
+  top_n(1, momentum) %>% ungroup() %>% # select the winner with max momentum
+  select(symbol, date) %>% 
+  rename(winner=symbol) %>% as_tibble() %>% 
+  right_join(dow_mom, by = c("date")) %>% # join the winner with price data
+  as_tsibble(index = date, key = symbol) %>% 
+  group_by(symbol) %>% 
+  #calculate the return for next 90 days, roughly 3 month
+  mutate(inv_ret = slide_dbl(return, ~ reduce((.x+1), `*`), 
+                              .size = 90, .align = "left")) %>% 
+  mutate(inv_ret = lead(inv_ret)) %>%
+  ungroup() -> dow_inv
 
-BA %>% as_tsibble(index = date) -> BA_tsbl
+  # select the winner return
+  dow_inv %>% 
+  filter(winner == symbol) %>% 
+  select(winner, date, inv_ret) -> dow_win
 
-
-# Is it necessary to fill the gap? or does it even correct?
-BA_tsbl %>% fill_gaps() %>% 
-  fill(adjusted, .direction = "down") -> BA_filled
-
-BA_filled %>% select(date, adjusted) %>% 
-  mutate(return = log(adjusted/lag(adjusted))) %>% 
-  #mutate(year_month = yearmonth(date)) %>%
-  #nest(-year_month) %>% 
-  mutate(momentum = slide_dbl(return, ~ reduce((.x+1), `*`), 
-                              .size = 365, .align = "center-left"))
-
-
+  dow_win %>% nrow()
+  dow_win %>% filter(inv_ret>1) %>% nrow()
+  mean(dow_win$inv_ret, na.rm = TRUE) - 1
 ```
-
 
 
 References {#references .unnumbered}
