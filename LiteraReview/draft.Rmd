@@ -12,6 +12,9 @@ There are many work related to the topic on wavelet and a special type of neural
 
 In time series analysis domain, @4494757 applied wavelet neural network in energy price forecasting in electricity markets. Also in electricy market, @1460110 using same set of techniques to predict long-term load.
 
+
+@doi:10.1080/095400997116766 propose a multiresolute style of analysis utilize recurrent neural network in order to increase the accuracy of prediction. This combination has been used by multiple authors, such as @Capizzi6320656 applied similar approach on solar radiation forcasting.
+
 In finace, @844615 propose to predict stock trend prediction with nn and multiresolution analsis. _this can be utilize to form a momentum based trading strategy._
 
 The most closed related work is @Wang2013, where they use wavelet combine with neural network to predict stock prices. They, however, only use wavelet to denoise the data not using wavelet coefficients in the neurual network. The trading strategy is on based on daily predictions of stock prices. The strategy earned significant return in backtest. 
@@ -28,8 +31,9 @@ In the light of optimal strategy suggested by @jegadeesh2001profitability, we wi
 
 the momentum is just the total return of last look-back period. Here we are using last 12 months. 
 
+Following code will run momentum strategy on dow indexed stock. With only 30 stocks, the strategy doesn't show much profitablity.
 
-```{r}
+```{r eval=FALSE}
 suppressMessages(library(tidyquant))
 library(tsibble)
 sp500 <- tq_index("SP500")
@@ -44,7 +48,7 @@ dow_prices %>% filter(symbol != "DOW") -> dow_prices
 
 ```
 
-```{r}
+```{r eval=FALSE}
 
 dow_prices %>% mutate(prices, prices = map(prices, function(x) x[c("adjusted", "date")])) %>% 
  # mutate_if(is.list, simplify_all) %>% 
@@ -52,7 +56,7 @@ dow_prices %>% mutate(prices, prices = map(prices, function(x) x[c("adjusted", "
 
 ```
 
-```{r}
+```{r eval=FALSE}
 
 dow_unnested %>% as_tsibble(index = date, key = symbol) -> dow_tsbl
 
@@ -78,7 +82,7 @@ dow_mom %>% ungroup() %>%
 ```
 
 
-```{r}
+```{r eval=FALSE}
 dow_mom %>% ungroup() %>% 
   mutate(str_date = as.character(date)) %>% 
   group_by(str_date) %>% 
@@ -103,6 +107,17 @@ dow_mom %>% ungroup() %>%
   dow_win %>% filter(inv_ret>1) %>% nrow()
   mean(dow_win$inv_ret, na.rm = TRUE) - 1
 ```
+
+### WNN
+
+@alexandridis2013wavelet present a practical intro on wavelet neural network. In essence, the model try to use neural network to adjust the weights of wavelet basis. In the light of time series context, recurrent neural network become one of the natural candidates. More complicated model will have harder time to converge. 
+
+**TO DOs:**
+
+[ ] implement neural network with wavelet basis, check the result.
+
+[ ] Try more complicated architecture of the NN, such as RNN.
+
 
 
 References {#references .unnumbered}
